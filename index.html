@@ -3,182 +3,258 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>LSPD - Comptes</title>
+  <title>LSPD - Bureautique</title>
   <style>
     body {
-      margin: 0;
-      padding: 0;
       font-family: "Segoe UI", sans-serif;
+      margin: 0;
       background-color: #0d1117;
-      color: #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
+      color: white;
     }
 
     .container {
-      width: 100%;
-      max-width: 400px;
+      max-width: 800px;
+      margin: 30px auto;
       padding: 20px;
-    }
-
-    .card {
       background-color: #161b22;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.8);
+      border-radius: 10px;
     }
 
-    h2 {
+    h1, h2 {
       text-align: center;
-      margin-bottom: 20px;
       color: #58a6ff;
     }
 
     form {
       display: flex;
       flex-direction: column;
+      gap: 10px;
     }
 
-    input, select {
-      padding: 12px;
-      margin: 8px 0;
+    input, select, textarea {
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
       background-color: #0d1117;
       border: 1px solid #30363d;
-      border-radius: 6px;
       color: white;
-    }
-
-    input::placeholder {
-      color: #8b949e;
-    }
-
-    select {
-      color: #c9d1d9;
     }
 
     button {
+      padding: 10px;
       background-color: #238636;
-      color: white;
-      padding: 12px;
-      margin-top: 15px;
       border: none;
-      border-radius: 6px;
+      border-radius: 5px;
       cursor: pointer;
-      transition: background 0.3s ease;
+      color: white;
     }
 
     button:hover {
       background-color: #2ea043;
     }
 
-    a {
-      color: #58a6ff;
-      text-decoration: none;
-      cursor: pointer;
-    }
-
-    a:hover {
-      text-decoration: underline;
-    }
-
-    p {
-      text-align: center;
-      margin-top: 15px;
-      font-size: 14px;
-    }
-
     .hidden {
       display: none;
+    }
+
+    .profile-card {
+      background-color: #21262d;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+    }
+
+    .btn-danger {
+      background-color: #da3633;
+    }
+
+    .btn-danger:hover {
+      background-color: #e5534b;
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    nav button {
+      flex: 1;
+      margin: 0 5px;
+    }
+
+    img.preview {
+      max-width: 100px;
+      margin-top: 10px;
+      border-radius: 8px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="card">
-      <!-- Création de compte -->
-      <div id="registerView">
-        <h2>Créer un compte LSPD</h2>
-        <form id="registerForm">
-          <input type="text" id="matricule" placeholder="Matricule" required />
-          <input type="text" id="nom" placeholder="Nom" required />
-          <input type="text" id="prenom" placeholder="Prénom" required />
-          <select id="grade" required>
-            <option value="">Sélectionner un grade</option>
-            <option value="LSPD">LSPD</option>
-            <option value="Haut grade">Haut grade</option>
-            <option value="Staff">Staff</option>
-            <option value="Justice">Justice</option>
-          </select>
-          <button type="submit">Créer le compte</button>
-        </form>
-        <p>Déjà un compte ? <a onclick="toggleView('login')">Connexion</a></p>
-      </div>
+  <div class="container" id="loginPage">
+    <h1>Connexion LSPD</h1>
+    <form id="loginForm">
+      <input type="text" id="matriculeLogin" placeholder="Matricule" required />
+      <input type="text" id="nomLogin" placeholder="Nom" required />
+      <input type="text" id="prenomLogin" placeholder="Prénom" required />
+      <select id="gradeLogin" required>
+        <option value="">Sélectionner un grade</option>
+        <option value="LSPD">LSPD</option>
+        <option value="Haut grade">Haut grade</option>
+        <option value="Staff">Staff</option>
+        <option value="Justice">Justice</option>
+      </select>
+      <button type="submit">Se connecter</button>
+    </form>
+  </div>
 
-      <!-- Connexion -->
-      <div id="loginView" class="hidden">
-        <h2>Connexion LSPD</h2>
-        <form id="loginForm">
-          <input type="text" id="matriculeLogin" placeholder="Matricule" required />
-          <input type="text" id="nomLogin" placeholder="Nom" required />
-          <input type="text" id="prenomLogin" placeholder="Prénom" required />
-          <select id="gradeLogin" required>
-            <option value="">Sélectionner un grade</option>
-            <option value="LSPD">LSPD</option>
-            <option value="Haut grade">Haut grade</option>
-            <option value="Staff">Staff</option>
-            <option value="Justice">Justice</option>
-          </select>
-          <button type="submit">Se connecter</button>
-        </form>
-        <p>Pas encore de compte ? <a onclick="toggleView('register')">Créer un compte</a></p>
-      </div>
+  <div class="container hidden" id="dashboard">
+    <h1>Bureautique LSPD</h1>
+    <p id="welcomeText"></p>
+    <nav>
+      <button onclick="showSection('createSuspect')">Créer un profil suspect</button>
+      <button onclick="showSection('readSuspects')">Voir les profils suspects</button>
+    </nav>
+
+    <!-- Création de profil suspect -->
+    <div id="createSuspect" class="hidden">
+      <h2>Créer un suspect</h2>
+      <form id="suspectForm">
+        <input type="text" id="suspectNom" placeholder="Nom" />
+        <input type="text" id="suspectPrenom" placeholder="Prénom" />
+        <input type="text" id="suspectTel" placeholder="Téléphone" />
+        <input type="text" id="suspectAdresse" placeholder="Adresse" />
+        <input type="date" id="suspectNaissance" />
+        <input type="file" id="suspectImage" accept="image/*" />
+        <img id="previewImage" class="preview" />
+        <button type="submit">Enregistrer le suspect</button>
+      </form>
+    </div>
+
+    <!-- Lecture des profils -->
+    <div id="readSuspects" class="hidden">
+      <h2>Profils suspects</h2>
+      <div id="suspectList"></div>
     </div>
   </div>
 
   <script>
-    function toggleView(view) {
-      document.getElementById("registerView").classList.toggle("hidden", view !== "register");
-      document.getElementById("loginView").classList.toggle("hidden", view !== "login");
+    let currentGrade = "";
+
+    function showSection(id) {
+      document.getElementById("createSuspect").classList.add("hidden");
+      document.getElementById("readSuspects").classList.add("hidden");
+      document.getElementById(id).classList.remove("hidden");
+      if (id === "readSuspects") renderSuspects();
     }
 
-    // Création de compte
-    document.getElementById("registerForm").addEventListener("submit", function (e) {
-      e.preventDefault();
-      const user = {
-        matricule: document.getElementById("matricule").value,
-        nom: document.getElementById("nom").value,
-        prenom: document.getElementById("prenom").value,
-        grade: document.getElementById("grade").value,
-      };
-      localStorage.setItem("lspdUser", JSON.stringify(user));
-      alert("Compte créé !");
-      toggleView('login');
+    // Prévisualisation image
+    document.getElementById("suspectImage").addEventListener("change", function () {
+      const file = this.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          document.getElementById("previewImage").src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      }
     });
 
     // Connexion
     document.getElementById("loginForm").addEventListener("submit", function (e) {
       e.preventDefault();
-      const savedUser = JSON.parse(localStorage.getItem("lspdUser"));
-      const matricule = document.getElementById("matriculeLogin").value;
-      const nom = document.getElementById("nomLogin").value;
-      const prenom = document.getElementById("prenomLogin").value;
       const grade = document.getElementById("gradeLogin").value;
+      currentGrade = grade;
 
-      if (
-        savedUser &&
-        savedUser.matricule === matricule &&
-        savedUser.nom === nom &&
-        savedUser.prenom === prenom &&
-        savedUser.grade === grade
-      ) {
-        alert("Connexion réussie !");
-        // Redirection vers tableau de bord possible ici
+      document.getElementById("loginPage").classList.add("hidden");
+      document.getElementById("dashboard").classList.remove("hidden");
+      document.getElementById("welcomeText").innerText = `Grade : ${grade}`;
+    });
+
+    // Sauvegarde suspect
+    document.getElementById("suspectForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const suspects = JSON.parse(localStorage.getItem("suspects") || "[]");
+
+      const reader = new FileReader();
+      const file = document.getElementById("suspectImage").files[0];
+
+      const suspectData = {
+        id: Date.now(),
+        nom: document.getElementById("suspectNom").value,
+        prenom: document.getElementById("suspectPrenom").value,
+        tel: document.getElementById("suspectTel").value,
+        adresse: document.getElementById("suspectAdresse").value,
+        naissance: document.getElementById("suspectNaissance").value,
+        image: ""
+      };
+
+      if (file) {
+        reader.onload = function () {
+          suspectData.image = reader.result;
+          suspects.push(suspectData);
+          localStorage.setItem("suspects", JSON.stringify(suspects));
+          alert("Suspect enregistré !");
+          document.getElementById("suspectForm").reset();
+          document.getElementById("previewImage").src = "";
+        };
+        reader.readAsDataURL(file);
       } else {
-        alert("Informations incorrectes !");
+        suspects.push(suspectData);
+        localStorage.setItem("suspects", JSON.stringify(suspects));
+        alert("Suspect enregistré !");
+        document.getElementById("suspectForm").reset();
       }
     });
+
+    function renderSuspects() {
+      const suspects = JSON.parse(localStorage.getItem("suspects") || "[]");
+      const list = document.getElementById("suspectList");
+      list.innerHTML = "";
+
+      if (suspects.length === 0) {
+        list.innerHTML = "<p>Aucun profil enregistré.</p>";
+        return;
+      }
+
+      suspects.forEach(s => {
+        const div = document.createElement("div");
+        div.className = "profile-card";
+        div.innerHTML = `
+          <strong>${s.nom || "?"} ${s.prenom || "?"}</strong><br>
+          📞 ${s.tel || "N/A"}<br>
+          📍 ${s.adresse || "N/A"}<br>
+          🎂 ${s.naissance || "N/A"}<br>
+          ${s.image ? `<img src="${s.image}" class="preview" />` : ""}
+          <br><button onclick="editSuspect(${s.id})">Modifier</button>
+          ${["Haut grade", "Justice", "Staff"].includes(currentGrade) ? `<button class="btn-danger" onclick="deleteSuspect(${s.id})">Supprimer</button>` : ""}
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function deleteSuspect(id) {
+      let suspects = JSON.parse(localStorage.getItem("suspects") || "[]");
+      suspects = suspects.filter(s => s.id !== id);
+      localStorage.setItem("suspects", JSON.stringify(suspects));
+      renderSuspects();
+    }
+
+    function editSuspect(id) {
+      const suspects = JSON.parse(localStorage.getItem("suspects") || "[]");
+      const suspect = suspects.find(s => s.id === id);
+      if (!suspect) return;
+
+      document.getElementById("suspectNom").value = suspect.nom;
+      document.getElementById("suspectPrenom").value = suspect.prenom;
+      document.getElementById("suspectTel").value = suspect.tel;
+      document.getElementById("suspectAdresse").value = suspect.adresse;
+      document.getElementById("suspectNaissance").value = suspect.naissance;
+      document.getElementById("previewImage").src = suspect.image || "";
+
+      showSection('createSuspect');
+      deleteSuspect(id); // On supprime et laisse l'utilisateur enregistrer à nouveau
+    }
   </script>
 </body>
 </html>
