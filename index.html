@@ -91,22 +91,94 @@
   </style>
 </head>
 <body>
-  <div class="container" id="loginPage">
-    <h1>Connexion LSPD</h1>
-    <form id="loginForm">
-      <input type="text" id="matriculeLogin" placeholder="Matricule" required />
-      <input type="text" id="nomLogin" placeholder="Nom" required />
-      <input type="text" id="prenomLogin" placeholder="Prénom" required />
-      <select id="gradeLogin" required>
-        <option value="">Sélectionner un grade</option>
-        <option value="LSPD">LSPD</option>
-        <option value="Haut grade">Haut grade</option>
-        <option value="Staff">Staff</option>
-        <option value="Justice">Justice</option>
-      </select>
-      <button type="submit">Se connecter</button>
-    </form>
+  <div class="container">
+    <div class="card">
+      <!-- Création de compte -->
+      <div id="registerView">
+        <h2>Créer un compte LSPD</h2>
+        <form id="registerForm">
+          <input type="text" id="matricule" placeholder="Matricule" required />
+          <input type="text" id="nom" placeholder="Nom" required />
+          <input type="text" id="prenom" placeholder="Prénom" required />
+          <select id="grade" required>
+            <option value="">Sélectionner un grade</option>
+            <option value="LSPD">LSPD</option>
+            <option value="Haut grade">Haut grade</option>
+            <option value="Staff">Staff</option>
+            <option value="Justice">Justice</option>
+          </select>
+          <button type="submit">Créer le compte</button>
+        </form>
+        <p>Déjà un compte ? <a onclick="toggleView('login')">Connexion</a></p>
+      </div>
+
+      <!-- Connexion -->
+      <div id="loginView" class="hidden">
+        <h2>Connexion LSPD</h2>
+        <form id="loginForm">
+          <input type="text" id="matriculeLogin" placeholder="Matricule" required />
+          <input type="text" id="nomLogin" placeholder="Nom" required />
+          <input type="text" id="prenomLogin" placeholder="Prénom" required />
+          <select id="gradeLogin" required>
+            <option value="">Sélectionner un grade</option>
+            <option value="LSPD">LSPD</option>
+            <option value="Haut grade">Haut grade</option>
+            <option value="Staff">Staff</option>
+            <option value="Justice">Justice</option>
+          </select>
+          <button type="submit">Se connecter</button>
+        </form>
+        <p>Pas encore de compte ? <a onclick="toggleView('register')">Créer un compte</a></p>
+      </div>
+    </div>
   </div>
+
+  <script>
+    function toggleView(view) {
+      document.getElementById("registerView").classList.toggle("hidden", view !== "register");
+      document.getElementById("loginView").classList.toggle("hidden", view !== "login");
+    }
+
+    // Création de compte
+    document.getElementById("registerForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const user = {
+        matricule: document.getElementById("matricule").value,
+        nom: document.getElementById("nom").value,
+        prenom: document.getElementById("prenom").value,
+        grade: document.getElementById("grade").value,
+      };
+      localStorage.setItem("lspdUser", JSON.stringify(user));
+      alert("Compte créé !");
+      toggleView('login');
+    });
+
+    // Connexion
+    document.getElementById("loginForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const savedUser = JSON.parse(localStorage.getItem("lspdUser"));
+      const matricule = document.getElementById("matriculeLogin").value;
+      const nom = document.getElementById("nomLogin").value;
+      const prenom = document.getElementById("prenomLogin").value;
+      const grade = document.getElementById("gradeLogin").value;
+
+      if (
+        savedUser &&
+        savedUser.matricule === matricule &&
+        savedUser.nom === nom &&
+        savedUser.prenom === prenom &&
+        savedUser.grade === grade
+      ) {
+        alert("Connexion réussie !");
+        // Redirection vers tableau de bord possible ici
+      } else {
+        alert("Informations incorrectes !");
+      }
+    });
+  </script>
+</body>
+</html>
+
 
   <div class="container hidden" id="dashboard">
     <h1>Bureautique LSPD</h1>
