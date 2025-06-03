@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Création de profil</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #34495e;
+        color: white;
+        padding: 20px;
+    }
+    h2 {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    form {
+        max-width: 500px;
+        margin: auto;
+        background: #2c3e50;
+        padding: 20px;
+        border-radius: 10px;
+    }
+    label {
+        display: block;
+        margin-top: 15px;
+        font-weight: bold;
+    }
+    input[type="text"],
+    input[type="date"],
+    input[type="tel"],
+    input[type="file"] {
+        width: 100%;
+        padding: 8px;
+        margin-top: 5px;
+        border-radius: 5px;
+        border: none;
+    }
+    button {
+        margin-top: 25px;
+        width: 100%;
+        padding: 12px;
+        font-size: 1.1em;
+        border: none;
+        border-radius: 6px;
+        background-color: #2980b9;
+        cursor: pointer;
+        color: white;
+        font-weight: bold;
+    }
+    button:hover {
+        background-color: #3498db;
+    }
+</style>
+</head>
+<body>
+
+<h2>Création de profil civil</h2>
+
+<form id="profilForm">
+    <label for="nom">Nom</label>
+    <input type="text" id="nom" name="nom" />
+
+    <label for="prenom">Prénom</label>
+    <input type="text" id="prenom" name="prenom" />
+
+    <label for="dateNaissance">Date de naissance</label>
+    <input type="date" id="dateNaissance" name="dateNaissance" />
+
+    <label for="adresse">Adresse</label>
+    <input type="text" id="adresse" name="adresse" />
+
+    <label for="telephone">Numéro de téléphone</label>
+    <input type="tel" id="telephone" name="telephone" />
+
+    <label for="photo">Photo</label>
+    <input type="file" id="photo" name="photo" accept="image/*" />
+
+    <button type="submit">Enregistrer le profil</button>
+</form>
+
+<script>
+    const form = document.getElementById('profilForm');
+
+    window.addEventListener('load', () => {
+        const idModif = localStorage.getItem('profilAModifier');
+        if (idModif) {
+            let profils = JSON.parse(localStorage.getItem('profils')) || [];
+            const profil = profils.find(p => p.id === Number(idModif));
+            if(profil) {
+                form.nom.value = profil.nom || '';
+                form.prenom.value = profil.prenom || '';
+                form.dateNaissance.value = profil.dateNaissance || '';
+                form.adresse.value = profil.adresse || '';
+                form.telephone.value = profil.telephone || '';
+                alert("Modification du profil. Pour changer la photo, rechargez-en une nouvelle.");
+                form.querySelector('button[type="submit"]').textContent = "Mettre à jour le profil";
+            }
+            localStorage.removeItem('profilAModifier');
+        }
+    });
+
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        const nom = form.nom.value.trim();
+        const prenom = form.prenom.value.trim();
+        const dateNaissance = form.dateNaissance.value;
+        const adresse = form.adresse.value.trim();
+        const telephone = form.telephone.value.trim();
+        const photoInput = form.photo;
+
+        const idModif = localStorage.getItem('profilAModifier');
+
+        function finalizeSave(photoBase64) {
+            let profils = JSON.parse(localStorage.getItem('profils')) || [];
+
+            if(idModif) {
+                const index = profils.findIndex(p => p.id === Number(idModif));
+                if(index !== -1) {
+                    profils[index] = {
+                        ...profils[index],
+                        nom,
+                        prenom,
+                        dateNaissance,
+                        adresse,
+                        telephone,
+                        photoBase64: photoBase64 || profils[index].photoBase64 || null
+                    };
+                    alert('Profil mis à jour !');
+                }
+            } else {
+                const id = Date.now();
+                profils.push({
+                    id,
+                    nom,
+                    prenom,
+                    dateNaissance,
+                    adresse,
+                    telephone,
+                    photoBase64
+                });
+                alert('Profil enregistré !');
+            }
+            localStorage.setItem('profils', JSON.stringify(profils));
+            form.reset();
+        }
+
+        if(photoInput.files.length > 0) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                finalizeSave(e.target.result);
+            };
+            reader.readAsDataURL(photoInput.files[0]);
+        } else {
+            finalizeSave(null);
+        }
+    });
+</script>
+
+</body>
+</html>
