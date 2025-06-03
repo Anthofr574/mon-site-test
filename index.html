@@ -1,30 +1,184 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Création de compte LSPD</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LSPD - Comptes</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", sans-serif;
+      background-color: #0d1117;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 400px;
+      padding: 20px;
+    }
+
+    .card {
+      background-color: #161b22;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.8);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #58a6ff;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+    }
+
+    input, select {
+      padding: 12px;
+      margin: 8px 0;
+      background-color: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: white;
+    }
+
+    input::placeholder {
+      color: #8b949e;
+    }
+
+    select {
+      color: #c9d1d9;
+    }
+
+    button {
+      background-color: #238636;
+      color: white;
+      padding: 12px;
+      margin-top: 15px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #2ea043;
+    }
+
+    a {
+      color: #58a6ff;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    p {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
 </head>
 <body>
-  <h1>Création de compte LSPD</h1>
-  <form id="registerForm">
-    <input type="text" id="matricule" placeholder="Matricule" required>
-    <input type="text" id="nom" placeholder="Nom" required>
-    <input type="text" id="prenom" placeholder="Prénom" required>
+  <div class="container">
+    <div class="card">
+      <!-- Création de compte -->
+      <div id="registerView">
+        <h2>Créer un compte LSPD</h2>
+        <form id="registerForm">
+          <input type="text" id="matricule" placeholder="Matricule" required />
+          <input type="text" id="nom" placeholder="Nom" required />
+          <input type="text" id="prenom" placeholder="Prénom" required />
+          <select id="grade" required>
+            <option value="">Sélectionner un grade</option>
+            <option value="LSPD">LSPD</option>
+            <option value="Haut grade">Haut grade</option>
+            <option value="Staff">Staff</option>
+            <option value="Justice">Justice</option>
+          </select>
+          <button type="submit">Créer le compte</button>
+        </form>
+        <p>Déjà un compte ? <a onclick="toggleView('login')">Connexion</a></p>
+      </div>
 
-    <select id="grade" required>
-      <option value="">-- Sélectionner un grade --</option>
-      <option value="LSPD">LSPD</option>
-      <option value="Haut grade">Haut grade</option>
-      <option value="Staff">Staff</option>
-      <option value="Justice">Justice</option>
-    </select>
+      <!-- Connexion -->
+      <div id="loginView" class="hidden">
+        <h2>Connexion LSPD</h2>
+        <form id="loginForm">
+          <input type="text" id="matriculeLogin" placeholder="Matricule" required />
+          <input type="text" id="nomLogin" placeholder="Nom" required />
+          <input type="text" id="prenomLogin" placeholder="Prénom" required />
+          <select id="gradeLogin" required>
+            <option value="">Sélectionner un grade</option>
+            <option value="LSPD">LSPD</option>
+            <option value="Haut grade">Haut grade</option>
+            <option value="Staff">Staff</option>
+            <option value="Justice">Justice</option>
+          </select>
+          <button type="submit">Se connecter</button>
+        </form>
+        <p>Pas encore de compte ? <a onclick="toggleView('register')">Créer un compte</a></p>
+      </div>
+    </div>
+  </div>
 
-    <button type="submit">Créer le compte</button>
-  </form>
+  <script>
+    function toggleView(view) {
+      document.getElementById("registerView").classList.toggle("hidden", view !== "register");
+      document.getElementById("loginView").classList.toggle("hidden", view !== "login");
+    }
 
-  <p>Déjà un compte ? <a href="login.html">Connecte-toi</a></p>
+    // Création de compte
+    document.getElementById("registerForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const user = {
+        matricule: document.getElementById("matricule").value,
+        nom: document.getElementById("nom").value,
+        prenom: document.getElementById("prenom").value,
+        grade: document.getElementById("grade").value,
+      };
+      localStorage.setItem("lspdUser", JSON.stringify(user));
+      alert("Compte créé !");
+      toggleView('login');
+    });
 
-  <script src="script.js"></script>
+    // Connexion
+    document.getElementById("loginForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const savedUser = JSON.parse(localStorage.getItem("lspdUser"));
+      const matricule = document.getElementById("matriculeLogin").value;
+      const nom = document.getElementById("nomLogin").value;
+      const prenom = document.getElementById("prenomLogin").value;
+      const grade = document.getElementById("gradeLogin").value;
+
+      if (
+        savedUser &&
+        savedUser.matricule === matricule &&
+        savedUser.nom === nom &&
+        savedUser.prenom === prenom &&
+        savedUser.grade === grade
+      ) {
+        alert("Connexion réussie !");
+        // Redirection vers tableau de bord possible ici
+      } else {
+        alert("Informations incorrectes !");
+      }
+    });
+  </script>
 </body>
 </html>
