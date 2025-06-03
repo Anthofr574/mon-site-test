@@ -1,127 +1,66 @@
 <?php
-// ... (le code PHP reste inchangé jusqu'à la balise <!DOCTYPE html>)
+// login.php
+session_start();
+$pdo = new PDO('mysql:host=localhost;dbname=pointeuse;charset=utf8', 'root', '');
+
+// Créer la base (si jamais oublié)
+$pdo->exec("CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nom VARCHAR(50),
+    prenom VARCHAR(50),
+    matricule VARCHAR(50),
+    grade ENUM('LSPD','Command staff','Staff'),
+    password VARCHAR(255)
+)");
+
+function is_logged_in() { return isset($_SESSION['user']); }
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['register'])) {
+        $stmt = $pdo->prepare("INSERT INTO users (nom, prenom, matricule, grade, password) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([
+            $_POST['nom'], $_POST['prenom'], $_POST['matricule'],
+            $_POST['grade'], password_hash("1234", PASSWORD_DEFAULT)
+        ]);
+        echo "<script>alert('Compte créé. Mot de passe par défaut : 1234');</script>";
+    }
+
+    if (isset($_POST['login'])) {
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE matricule = ?");
+        $stmt->execute([$_POST['matricule']]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($user && password_verify($_POST['password'], $user['password'])) {
+            $_SESSION['user'] = $user;
+            header("Location: pointeuse.php");
+            exit;
+        } else {
+            echo "<script>alert('Identifiants invalides');</script>";
+        }
+    }
+}
 ?>
 
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Pointeuse LSPD</title>
-    <style>
-        body {
-            font-family: "Segoe UI", sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f0f4f8;
-            color: #333;
-        }
-
-        header {
-            background-color: #002b5c;
-            color: white;
-            padding: 15px;
-            text-align: center;
-        }
-
-        main {
-            max-width: 900px;
-            margin: 30px auto;
-            padding: 20px;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-
-        h2, h3 {
-            color: #002b5c;
-        }
-
-        form {
-            margin-bottom: 20px;
-        }
-
-        input, select, button {
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-            width: 100%;
-            max-width: 300px;
-            box-sizing: border-box;
-        }
-
-        button {
-            background-color: #002b5c;
-            color: white;
-            border: none;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-
-        button:hover {
-            background-color: #0050c8;
-        }
-
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-top: 10px;
-            background-color: #fff;
-        }
-
-        th, td {
-            border: 1px solid #ccc;
-            padding: 10px;
-            text-align: left;
-        }
-
-        th {
-            background-color: #002b5c;
-            color: white;
-        }
-
-        a {
-            color: #002b5c;
-            text-decoration: none;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-
-        .actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-    </style>
+    <title>Connexion LSPD</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<header>
-    <h1>Pointeuse LSPD</h1>
-</header>
-
 <main>
-<?php if (!is_logged_in()): ?>
     <h2>Connexion</h2>
     <form method="post">
-        <label>Matricule:</label>
-        <input name="matricule" required>
-        <label>Mot de passe:</label>
-        <input type="password" name="password" required>
+        <input name="matricule" placeholder="Matricule" required>
+        <input type="password" name="password" placeholder="Mot de passe" required>
         <button name="login">Se connecter</button>
     </form>
 
     <h2>Créer un compte</h2>
     <form method="post">
-        <label>Nom:</label>
-        <input name="nom" required>
-        <label>Prénom:</label>
-        <input name="prenom" required>
-        <label>Matricule:</label>
-        <input name="matricule" required>
-        <label>Grade:</label>
+        <input name="nom" placeholder="Nom" required>
+        <input name="prenom" placeholder="Prénom" required>
+        <input name="matricule" placeholder="Matricule" required>
         <select name="grade">
             <option>LSPD</option>
             <option>Command staff</option>
@@ -129,71 +68,6 @@
         </select>
         <button name="register">Créer</button>
     </form>
-
-<?php else: $user = get_user(); ?>
-    <h2>Bienvenue <?= htmlspecialchars($user['prenom']) ?> (<?= $user['grade'] ?>) — <a href="?logout">Déconnexion</a></h2>
-
-    <form method="post">
-        <?php
-        $stmt = $pdo->prepare("SELECT * FROM pointeuse WHERE user_id = ? AND end IS NULL");
-        $stmt->execute([$user['id']]);
-        $active = $stmt->fetch();
-        ?>
-        <button name="pointeuse" value="<?= $active ? 'stop' : 'start' ?>">
-            <?= $active ? '⏹️ Arrêter la pointeuse' : '▶️ Démarrer la pointeuse' ?>
-        </button>
-    </form>
-
-    <h3>Mon historique</h3>
-    <table>
-        <tr><th>Début</th><th>Fin</th></tr>
-        <?php
-        $stmt = $pdo->prepare("SELECT * FROM pointeuse WHERE user_id = ? ORDER BY start DESC");
-        $stmt->execute([$user['id']]);
-        foreach ($stmt as $row) {
-            echo "<tr><td>{$row['start']}</td><td>{$row['end']}</td></tr>";
-        }
-        ?>
-    </table>
-
-    <h3>Effectifs actifs</h3>
-    <table>
-        <tr><th>Nom</th><th>Prénom</th><th>Grade</th><th>Début</th></tr>
-        <?php
-        $stmt = $pdo->query("SELECT u.nom, u.prenom, u.grade, p.start FROM pointeuse p JOIN users u ON p.user_id = u.id WHERE p.end IS NULL");
-        foreach ($stmt as $row) {
-            echo "<tr><td>{$row['nom']}</td><td>{$row['prenom']}</td><td>{$row['grade']}</td><td>{$row['start']}</td></tr>";
-        }
-        ?>
-    </table>
-
-    <?php if (is_command() || is_staff()): ?>
-    <div class="actions">
-        <form method="post">
-            <button name="export">📥 Exporter en CSV</button>
-        </form>
-        <form method="post" onsubmit="return confirm('Confirmer la réinitialisation ?')">
-            <button name="reset">🧹 Réinitialiser la pointeuse</button>
-        </form>
-    </div>
-    <?php endif; ?>
-
-    <?php if (is_staff()): ?>
-    <h3>Supprimer un membre</h3>
-    <form method="post">
-        <select name="delete_user">
-            <?php
-            $stmt = $pdo->query("SELECT id, nom, prenom, matricule FROM users WHERE id != " . $user['id']);
-            foreach ($stmt as $u) {
-                echo "<option value='{$u['id']}'>{$u['nom']} {$u['prenom']} ({$u['matricule']})</option>";
-            }
-            ?>
-        </select>
-        <button>❌ Supprimer</button>
-    </form>
-    <?php endif; ?>
-
-<?php endif; ?>
 </main>
 </body>
 </html>
