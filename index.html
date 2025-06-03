@@ -1,52 +1,82 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Bureautique LSPD</title>
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        background: #2c3e50;
-        color: white;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        height: 100vh;
-        justify-content: center;
-    }
-    h1 {
-        font-size: 3em;
-        margin-bottom: 50px;
-    }
-    .buttons {
-        display: flex;
-        gap: 30px;
-    }
-    button {
-        padding: 20px 40px;
-        font-size: 1.2em;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        background-color: #2980b9;
-        color: white;
-        transition: background-color 0.3s;
-    }
-    button:hover {
-        background-color: #3498db;
-    }
-</style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Connexion / Création de compte</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #2c3e50;
+            color: #ecf0f1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: #34495e;
+            padding: 30px 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            width: 320px;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+        input[type="text"], select {
+            width: 100%;
+            padding: 8px 10px;
+            margin-bottom: 15px;
+            border: none;
+            border-radius: 4px;
+        }
+        input[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            background: #2980b9;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+        }
+        input[type="submit"]:hover {
+            background: #3498db;
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h2>Connexion / Création de compte</h2>
+        <form>
+            <label for="matricule">Matricule</label>
+            <input type="text" id="matricule" name="matricule" required />
 
-<h1>Bureautique LSPD</h1>
+            <label for="nom">Nom</label>
+            <input type="text" id="nom" name="nom" required />
 
-<div class="buttons">
-    <button onclick="location.href='creation.html'">Création de profil</button>
-    <button onclick="location.href='lecture.html'">Lecture des profils</button>
-</div>
+            <label for="prenom">Prénom</label>
+            <input type="text" id="prenom" name="prenom" required />
 
+            <label for="grade">Grade</label>
+            <select id="grade" name="grade" required>
+                <option value="" disabled selected>-- Sélectionnez un grade --</option>
+                <option value="LSPD">LSPD</option>
+                <option value="Haut gradé">Haut gradé</option>
+                <option value="Justice">Justice</option>
+                <option value="Staff">Staff</option>
+            </select>
+
+            <input type="submit" value="Valider" />
+        </form>
+    </div>
 </body>
 </html>
