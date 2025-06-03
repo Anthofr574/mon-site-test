@@ -1,332 +1,183 @@
+<?php
+session_start();
+$pdo = new PDO('mysql:host=localhost;dbname=pointeuse;charset=utf8', 'root', '');
+
+// Créer la base si elle n’existe pas (à lancer une fois)
+$pdo->exec("CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nom VARCHAR(50),
+    prenom VARCHAR(50),
+    matricule VARCHAR(50),
+    grade ENUM('LSPD','Command staff','Staff'),
+    password VARCHAR(255)
+)");
+$pdo->exec("CREATE TABLE IF NOT EXISTS pointeuse (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    start DATETIME,
+    end DATETIME,
+    FOREIGN KEY(user_id) REFERENCES users(id)
+)");
+
+function is_logged_in() { return isset($_SESSION['user']); }
+function get_user() { return $_SESSION['user'] ?? null; }
+function is_staff() { return get_user()['grade'] === 'Staff'; }
+function is_command() { return get_user()['grade'] === 'Command staff'; }
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['register'])) {
+        $stmt = $pdo->prepare("INSERT INTO users (nom, prenom, matricule, grade, password) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([
+            $_POST['nom'], $_POST['prenom'], $_POST['matricule'],
+            $_POST['grade'], password_hash("1234", PASSWORD_DEFAULT)
+        ]);
+        echo "<script>alert('Compte créé. Mot de passe par défaut : 1234');</script>";
+    }
+
+    if (isset($_POST['login'])) {
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE matricule = ?");
+        $stmt->execute([$_POST['matricule']]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($user && password_verify($_POST['password'], $user['password'])) {
+            $_SESSION['user'] = $user;
+        } else {
+            echo "<script>alert('Identifiants invalides');</script>";
+        }
+    }
+
+    if (isset($_POST['pointeuse'])) {
+        $uid = get_user()['id'];
+        if ($_POST['pointeuse'] === 'start') {
+            $pdo->prepare("INSERT INTO pointeuse (user_id, start) VALUES (?, NOW())")->execute([$uid]);
+        } else {
+            $pdo->prepare("UPDATE pointeuse SET end = NOW() WHERE user_id = ? AND end IS NULL")->execute([$uid]);
+        }
+    }
+
+    if (isset($_POST['reset']) && (is_command() || is_staff())) {
+        $pdo->exec("TRUNCATE TABLE pointeuse");
+    }
+
+    if (isset($_POST['delete_user']) && is_staff()) {
+        $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+        $stmt->execute([$_POST['delete_user']]);
+    }
+
+    if (isset($_POST['export']) && (is_command() || is_staff())) {
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="pointeuse.csv"');
+        $stmt = $pdo->query("SELECT u.nom, u.prenom, u.grade, p.start, p.end FROM pointeuse p JOIN users u ON p.user_id = u.id");
+        $f = fopen('php://output', 'w');
+        fputcsv($f, ['Nom', 'Prénom', 'Grade', 'Début', 'Fin']);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) fputcsv($f, $row);
+        fclose($f);
+        exit;
+    }
+}
+
+if (isset($_GET['logout'])) {
+    session_destroy();
+    header("Location: pointeuse.php");
+    exit;
+}
+?>
+
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>LSPD - Bureautique</title>
-  <style>
-    body {
-      font-family: "Segoe UI", sans-serif;
-      margin: 0;
-      background-color: #0d1117;
-      color: white;
-    }
-
-    .container {
-      max-width: 800px;
-      margin: 30px auto;
-      padding: 20px;
-      background-color: #161b22;
-      border-radius: 10px;
-    }
-
-    h1, h2 {
-      text-align: center;
-      color: #58a6ff;
-    }
-
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    input, select, textarea {
-      padding: 10px;
-      border: none;
-      border-radius: 5px;
-      background-color: #0d1117;
-      border: 1px solid #30363d;
-      color: white;
-    }
-
-    button {
-      padding: 10px;
-      background-color: #238636;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      color: white;
-    }
-
-    button:hover {
-      background-color: #2ea043;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    .profile-card {
-      background-color: #21262d;
-      padding: 15px;
-      margin: 10px 0;
-      border-radius: 8px;
-    }
-
-    .btn-danger {
-      background-color: #da3633;
-    }
-
-    .btn-danger:hover {
-      background-color: #e5534b;
-    }
-
-    nav {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
-
-    nav button {
-      flex: 1;
-      margin: 0 5px;
-    }
-
-    img.preview {
-      max-width: 100px;
-      margin-top: 10px;
-      border-radius: 8px;
-    }
-  </style>
+    <title>Pointeuse LSPD</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        form { margin-bottom: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 8px; }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <div class="card">
-      <!-- Création de compte -->
-      <div id="registerView">
-        <h2>Créer un compte LSPD</h2>
-        <form id="registerForm">
-          <input type="text" id="matricule" placeholder="Matricule" required />
-          <input type="text" id="nom" placeholder="Nom" required />
-          <input type="text" id="prenom" placeholder="Prénom" required />
-          <select id="grade" required>
-            <option value="">Sélectionner un grade</option>
-            <option value="LSPD">LSPD</option>
-            <option value="Haut grade">Haut grade</option>
-            <option value="Staff">Staff</option>
-            <option value="Justice">Justice</option>
-          </select>
-          <button type="submit">Créer le compte</button>
-        </form>
-        <p>Déjà un compte ? <a onclick="toggleView('login')">Connexion</a></p>
-      </div>
 
-      <!-- Connexion -->
-      <div id="loginView" class="hidden">
-        <h2>Connexion LSPD</h2>
-        <form id="loginForm">
-          <input type="text" id="matriculeLogin" placeholder="Matricule" required />
-          <input type="text" id="nomLogin" placeholder="Nom" required />
-          <input type="text" id="prenomLogin" placeholder="Prénom" required />
-          <select id="gradeLogin" required>
-            <option value="">Sélectionner un grade</option>
-            <option value="LSPD">LSPD</option>
-            <option value="Haut grade">Haut grade</option>
-            <option value="Staff">Staff</option>
-            <option value="Justice">Justice</option>
-          </select>
-          <button type="submit">Se connecter</button>
-        </form>
-        <p>Pas encore de compte ? <a onclick="toggleView('register')">Créer un compte</a></p>
-      </div>
-    </div>
-  </div>
+<?php if (!is_logged_in()): ?>
+<h2>Connexion</h2>
+<form method="post">
+    Matricule: <input name="matricule" required>
+    Mot de passe: <input type="password" name="password" required>
+    <button name="login">Se connecter</button>
+</form>
 
-  <script>
-    function toggleView(view) {
-      document.getElementById("registerView").classList.toggle("hidden", view !== "register");
-      document.getElementById("loginView").classList.toggle("hidden", view !== "login");
+<h2>Créer un compte</h2>
+<form method="post">
+    Nom: <input name="nom" required>
+    Prénom: <input name="prenom" required>
+    Matricule: <input name="matricule" required>
+    Grade:
+    <select name="grade">
+        <option>LSPD</option>
+        <option>Command staff</option>
+        <option>Staff</option>
+    </select>
+    <button name="register">Créer</button>
+</form>
+
+<?php else: $user = get_user(); ?>
+<h2>Bienvenue <?= htmlspecialchars($user['prenom']) ?> (<?= $user['grade'] ?>) - <a href="?logout">Déconnexion</a></h2>
+
+<form method="post">
+    <?php
+    $stmt = $pdo->prepare("SELECT * FROM pointeuse WHERE user_id = ? AND end IS NULL");
+    $stmt->execute([$user['id']]);
+    $active = $stmt->fetch();
+    ?>
+    <button name="pointeuse" value="<?= $active ? 'stop' : 'start' ?>">
+        <?= $active ? 'Arrêter la pointeuse' : 'Démarrer la pointeuse' ?>
+    </button>
+</form>
+
+<h3>Mon historique</h3>
+<table>
+    <tr><th>Début</th><th>Fin</th></tr>
+    <?php
+    $stmt = $pdo->prepare("SELECT * FROM pointeuse WHERE user_id = ? ORDER BY start DESC");
+    $stmt->execute([$user['id']]);
+    foreach ($stmt as $row) {
+        echo "<tr><td>{$row['start']}</td><td>{$row['end']}</td></tr>";
     }
+    ?>
+</table>
 
-    // Création de compte
-    document.getElementById("registerForm").addEventListener("submit", function (e) {
-      e.preventDefault();
-      const user = {
-        matricule: document.getElementById("matricule").value,
-        nom: document.getElementById("nom").value,
-        prenom: document.getElementById("prenom").value,
-        grade: document.getElementById("grade").value,
-      };
-      localStorage.setItem("lspdUser", JSON.stringify(user));
-      alert("Compte créé !");
-      toggleView('login');
-    });
-
-    // Connexion
-    document.getElementById("loginForm").addEventListener("submit", function (e) {
-      e.preventDefault();
-      const savedUser = JSON.parse(localStorage.getItem("lspdUser"));
-      const matricule = document.getElementById("matriculeLogin").value;
-      const nom = document.getElementById("nomLogin").value;
-      const prenom = document.getElementById("prenomLogin").value;
-      const grade = document.getElementById("gradeLogin").value;
-
-      if (
-        savedUser &&
-        savedUser.matricule === matricule &&
-        savedUser.nom === nom &&
-        savedUser.prenom === prenom &&
-        savedUser.grade === grade
-      ) {
-        alert("Connexion réussie !");
-        // Redirection vers tableau de bord possible ici
-      } else {
-        alert("Informations incorrectes !");
-      }
-    });
-  </script>
-</body>
-</html>
-
-
-  <div class="container hidden" id="dashboard">
-    <h1>Bureautique LSPD</h1>
-    <p id="welcomeText"></p>
-    <nav>
-      <button onclick="showSection('createSuspect')">Créer un profil suspect</button>
-      <button onclick="showSection('readSuspects')">Voir les profils suspects</button>
-    </nav>
-
-    <!-- Création de profil suspect -->
-    <div id="createSuspect" class="hidden">
-      <h2>Créer un suspect / Modifier </h2>
-      <form id="suspectForm">
-        <input type="text" id="suspectNom" placeholder="Nom" />
-        <input type="text" id="suspectPrenom" placeholder="Prénom" />
-        <input type="text" id="suspectTel" placeholder="Téléphone" />
-        <input type="text" id="suspectAdresse" placeholder="Adresse" />
-        <input type="date" id="suspectNaissance" />
-        <input type="file" id="suspectImage" accept="image/*" />
-        <img id="previewImage" class="preview" />
-        <button type="submit">Enregistrer le suspect</button>
-      </form>
-    </div>
-
-    <!-- Lecture des profils -->
-    <div id="readSuspects" class="hidden">
-      <h2>Profils suspects</h2>
-      <div id="suspectList"></div>
-    </div>
-  </div>
-
-  <script>
-    let currentGrade = "";
-
-    function showSection(id) {
-      document.getElementById("createSuspect").classList.add("hidden");
-      document.getElementById("readSuspects").classList.add("hidden");
-      document.getElementById(id).classList.remove("hidden");
-      if (id === "readSuspects") renderSuspects();
+<h3>Effectifs actifs</h3>
+<table>
+    <tr><th>Nom</th><th>Prénom</th><th>Grade</th><th>Début</th></tr>
+    <?php
+    $stmt = $pdo->query("SELECT u.nom, u.prenom, u.grade, p.start FROM pointeuse p JOIN users u ON p.user_id = u.id WHERE p.end IS NULL");
+    foreach ($stmt as $row) {
+        echo "<tr><td>{$row['nom']}</td><td>{$row['prenom']}</td><td>{$row['grade']}</td><td>{$row['start']}</td></tr>";
     }
+    ?>
+</table>
 
-    // Prévisualisation image
-    document.getElementById("suspectImage").addEventListener("change", function () {
-      const file = this.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          document.getElementById("previewImage").src = reader.result;
-        };
-        reader.readAsDataURL(file);
-      }
-    });
+<?php if (is_command() || is_staff()): ?>
+<form method="post">
+    <button name="export">📥 Exporter en CSV</button>
+</form>
+<form method="post" onsubmit="return confirm('Confirmer la réinitialisation ?')">
+    <button name="reset">🧹 Réinitialiser la pointeuse</button>
+</form>
+<?php endif; ?>
 
-    // Connexion
-    document.getElementById("loginForm").addEventListener("submit", function (e) {
-      e.preventDefault();
-      const grade = document.getElementById("gradeLogin").value;
-      currentGrade = grade;
+<?php if (is_staff()): ?>
+<h3>Supprimer un membre</h3>
+<form method="post">
+    <select name="delete_user">
+        <?php
+        $stmt = $pdo->query("SELECT id, nom, prenom, matricule FROM users WHERE id != " . $user['id']);
+        foreach ($stmt as $u) {
+            echo "<option value='{$u['id']}'>{$u['nom']} {$u['prenom']} ({$u['matricule']})</option>";
+        }
+        ?>
+    </select>
+    <button>❌ Supprimer</button>
+</form>
+<?php endif; ?>
 
-      document.getElementById("loginPage").classList.add("hidden");
-      document.getElementById("dashboard").classList.remove("hidden");
-      document.getElementById("welcomeText").innerText = `Grade : ${grade}`;
-    });
-
-    // Sauvegarde suspect
-    document.getElementById("suspectForm").addEventListener("submit", function (e) {
-      e.preventDefault();
-      const suspects = JSON.parse(localStorage.getItem("suspects") || "[]");
-
-      const reader = new FileReader();
-      const file = document.getElementById("suspectImage").files[0];
-
-      const suspectData = {
-        id: Date.now(),
-        nom: document.getElementById("suspectNom").value,
-        prenom: document.getElementById("suspectPrenom").value,
-        tel: document.getElementById("suspectTel").value,
-        adresse: document.getElementById("suspectAdresse").value,
-        naissance: document.getElementById("suspectNaissance").value,
-        image: ""
-      };
-
-      if (file) {
-        reader.onload = function () {
-          suspectData.image = reader.result;
-          suspects.push(suspectData);
-          localStorage.setItem("suspects", JSON.stringify(suspects));
-          alert("Suspect enregistré !");
-          document.getElementById("suspectForm").reset();
-          document.getElementById("previewImage").src = "";
-        };
-        reader.readAsDataURL(file);
-      } else {
-        suspects.push(suspectData);
-        localStorage.setItem("suspects", JSON.stringify(suspects));
-        alert("Suspect enregistré !");
-        document.getElementById("suspectForm").reset();
-      }
-    });
-
-    function renderSuspects() {
-      const suspects = JSON.parse(localStorage.getItem("suspects") || "[]");
-      const list = document.getElementById("suspectList");
-      list.innerHTML = "";
-
-      if (suspects.length === 0) {
-        list.innerHTML = "<p>Aucun profil enregistré.</p>";
-        return;
-      }
-
-      suspects.forEach(s => {
-        const div = document.createElement("div");
-        div.className = "profile-card";
-        div.innerHTML = `
-          <strong>${s.nom || "?"} ${s.prenom || "?"}</strong><br>
-          📞 ${s.tel || "N/A"}<br>
-          📍 ${s.adresse || "N/A"}<br>
-          🎂 ${s.naissance || "N/A"}<br>
-          ${s.image ? `<img src="${s.image}" class="preview" />` : ""}
-          <br><button onclick="editSuspect(${s.id})">Modifier</button>
-          ${["Haut grade", "Justice", "Staff"].includes(currentGrade) ? `<button class="btn-danger" onclick="deleteSuspect(${s.id})">Supprimer</button>` : ""}
-        `;
-        list.appendChild(div);
-      });
-    }
-
-    function deleteSuspect(id) {
-      let suspects = JSON.parse(localStorage.getItem("suspects") || "[]");
-      suspects = suspects.filter(s => s.id !== id);
-      localStorage.setItem("suspects", JSON.stringify(suspects));
-      renderSuspects();
-    }
-
-    function editSuspect(id) {
-      const suspects = JSON.parse(localStorage.getItem("suspects") || "[]");
-      const suspect = suspects.find(s => s.id === id);
-      if (!suspect) return;
-
-      document.getElementById("suspectNom").value = suspect.nom;
-      document.getElementById("suspectPrenom").value = suspect.prenom;
-      document.getElementById("suspectTel").value = suspect.tel;
-      document.getElementById("suspectAdresse").value = suspect.adresse;
-      document.getElementById("suspectNaissance").value = suspect.naissance;
-      document.getElementById("previewImage").src = suspect.image || "";
-
-      showSection('createSuspect');
-      deleteSuspect(id); // On supprime et laisse l'utilisateur enregistrer à nouveau
-    }
-  </script>
+<?php endif; ?>
 </body>
 </html>
